@@ -212,21 +212,3 @@ infixr 7 .++.
 (.++.) {ts} {us} rt ru =
        mkTorUC (isSet (labelsOf (ts ++ us)))
                (\p => appendR rt ru p)
-
-
-
--- *** Example (Remove this before pushing to repo) ***
-r1 : Record [("surname", String), ("age", Int)]
-r1 = ("surname" .=. "Bond") .*.
-     ("age" .=. 30) .*.
-     emptyRec
-
-r2 : Record [("surname", String), ("name", String)]
-r2 = ("surname" .=. "Bond") .*.
-     ("name" .=. "James") .*.
-     emptyRec
-    
-r3 : Record [("name", String), ("code", String)]
-r3 = ("name" .=. "James") .*.
-     ("code" .=. "007") .*.
-     emptyRec
