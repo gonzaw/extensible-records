@@ -271,7 +271,6 @@ ifDeleteLabelsThenIsSet [] isS = isS
 ifDeleteLabelsThenIsSet (l :: ls) isS = 
   let isSSub = ifDeleteLabelsThenIsSet ls isS 
   in ifDeleteThenIsSet l isSSub
-    
 
 ifDeleteThenResultsAreNotInList : DecEq lty => {ts : List (lty, Type)} -> {ls : List lty} -> (l : lty) ->
   AllNotInList ls (labelsOf ts) -> IsSet (labelsOf ts) ->

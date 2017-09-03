@@ -60,6 +60,7 @@ rDelete = "surname" .//. r1
 
 rDeleteLabels1 : Record [("age", Int), ("name", String)]
 rDeleteLabels1 = ["surname", "code"] .///. rAppend
+-- { "age" = 30, "name" = "James" }
 
 rDeleteLabels2 : Record [("age", Int), ("name", String)]
 rDeleteLabels2 = ["code", "surname"] .///. rAppend
