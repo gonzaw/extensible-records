@@ -29,7 +29,6 @@ notElemInCons notElemCons elemTail = notElemCons $ There elemTail
 ifNotElemThenNotEqual : Not (Elem x (y :: ys)) -> Not (x = y)
 ifNotElemThenNotEqual notElemCons equal = notElemCons $ rewrite equal in Here
 
-
 -- *** IsSet ***
 
 data IsSet : List t -> Type where
@@ -76,9 +75,35 @@ labelsOf = map fst
 
 infixr 3 :++:
 
+-- Appends two labelled hlists
 (:++:) : LHList ts -> LHList us -> LHList (ts ++ us)
 (:++:) HNil ys      = ys
 (:++:) (x :> xs) ys = x :> (xs :++: ys)
+
+-- *** Functions on List (lty, Type) ***
+
+infixr 3 ://:
+
+-- Deletes a single element from the list
+(://:) : DecEq lty => lty -> List (lty, Type) -> List (lty, Type)
+(://:) l [] = []
+(://:) l ((l', ty) :: ts) with (decEq l l')
+  (://:) l ((l', ty) :: ts) | Yes _ = ts
+  (://:) l ((l', ty) :: ts) | No _  = (l', ty) :: (l ://: ts)
+
+infixr 4 :///:
+      
+-- Deletes a list of elements from the list
+(:///:) : DecEq lty => List lty -> List (lty, Type) -> List (lty, Type)
+(:///:) [] ts = ts
+(:///:) (l :: ls) ts = l ://: (ls :///: ts)
+
+infixr 4 :||:
+
+-- Returns the left union of two lists
+(:||:) : DecEq lty => List (lty, Type) -> List (lty, Type) -> List (lty, Type)
+(:||:) ts us = ts ++ ((labelsOf ts) :///: us)
+
 
 -- *** Record ***
 
@@ -232,3 +257,50 @@ infixr 7 .++.
 (.++.) {ts} {us} rt ru =
        mkTorUC (isSet (labelsOf (ts ++ us)))
                (\p => appendR rt ru p)
+
+-- *** Delete ***
+
+
+
+hDeleteH : DecEq lty => {ts : List (lty, Type)} -> (l : lty) -> LHList ts -> LHList (l ://: ts)
+hDeleteH {ts=[]} _ _ = HNil
+hDeleteH {ts=(l', ty)::ts} l (f :> fs) with (decEq l l')
+  hDeleteH {ts=(l', ty)::ts} l (f :> fs) | Yes _ = fs
+  hDeleteH {ts=(l', ty)::ts} l (f :> fs) | No _  = f :> hDeleteH l fs
+
+ifDeleteLabelThenIsNotElem : DecEq lty => {ts : List (lty, Type)} -> {l, l' : lty} -> 
+                             Not (Elem l' (labelsOf ts)) -> Not (Elem l' (labelsOf (l ://: ts)))
+ifDeleteLabelThenIsNotElem {ts=[]} {l} {l'} nIsE isEDel = absurd $ noEmptyElem isEDel
+ifDeleteLabelThenIsNotElem {ts=(l'', ty)::ts} {l} {l'} nIsE isEDel with (decEq l l'')
+  ifDeleteLabelThenIsNotElem {ts=(l, ty)::ts} {l} {l'} nIsE isEDel      | Yes Refl = (notElemInCons nIsE) isEDel
+  ifDeleteLabelThenIsNotElem {ts=(l', ty)::ts} {l} {l'} nIsE Here       | No contra = nIsE Here
+  ifDeleteLabelThenIsNotElem {ts=(l'', ty)::ts} {l} {l'} nIsE (There th)| No _ = 
+                             ifDeleteLabelThenIsNotElem {l} {l'} {ts} (notElemInCons nIsE) th
+  
+ifDeleteLabelThenIsSet : DecEq lty => {ts : List (lty, Type)} -> (l : lty) -> IsSet (labelsOf ts) -> IsSet (labelsOf (l ://: ts))
+ifDeleteLabelThenIsSet {ts=[]} l isS = IsSetNil
+ifDeleteLabelThenIsSet {ts=(l', ty)::ts} l (IsSetCons nIsE isS) with (decEq l l') 
+  ifDeleteLabelThenIsSet {ts=(l, ty)::ts} l (IsSetCons nIsE isS) | Yes Refl = isS
+  ifDeleteLabelThenIsSet {ts=(l', ty)::ts} l (IsSetCons nIsE isS) | No _  = 
+    let nIsEDel = ifDeleteLabelThenIsNotElem {l} {l'} nIsE
+        isSDel = ifDeleteLabelThenIsSet l isS
+    in IsSetCons nIsEDel isSDel
+
+infixr 7 .//.
+
+(.//.) : DecEq lty => {ts : List (lty, Type)} -> (l : lty) -> Record ts ->
+         Record (l ://: ts)
+(.//.) l (MkRecord isS fs) =
+  let newFs = hDeleteH l fs
+      newIsS = ifDeleteLabelThenIsSet l isS
+  in MkRecord newIsS newFs
+
+-- *** Delete Labels ***
+
+-- *** Left Union ***
+
+infixr 7 .||.
+
+(.||.) : DecEq lty => {ts, us : List (lty, Type)} -> Record ts -> Record us ->
+         Record (ts :||: us)
+(.||.) r1 r2 = ?leftUnion_rhs

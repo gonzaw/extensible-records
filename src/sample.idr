@@ -43,3 +43,10 @@ rAppend = r1 .++. r3
 rUpdate : Record [("surname", String), ("age", Int)]
 rUpdate = updR "surname" r1 "Dean"
 -- { "surname" = "Dean", "age" = 30 }
+
+
+-- *** Delete ***
+
+rDelete : Record [("age", Int)]
+rDelete = "surname" .//. r1
+-- { "age" = 30 }
