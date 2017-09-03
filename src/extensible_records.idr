@@ -169,13 +169,13 @@ getType ((l, ty) :: ts) Here      = ty
 getType ((l, ty) :: ts)(There th) = getType ts th
 
 lookupH : (l : lty) -> LHList ts -> 
-          (elem : Elem l (labelsOf ts)) -> getType ts elem
+          (isE : Elem l (labelsOf ts)) -> getType ts isE
 lookupH _ ((_ .=. v) :> _) Here   = v
 lookupH l (_ :> hs) (There th)    = lookupH l hs th
 
 lookupR : (l : lty) -> Record ts -> 
-          (elem : Elem l (labelsOf ts)) -> getType ts elem
-lookupR l (MkRecord _ fs) elem = lookupH l fs elem
+          (isE : Elem l (labelsOf ts)) -> getType ts isE
+lookupR l (MkRecord _ fs) isE = lookupH l fs isE
 
 MaybeLkp : DecEq lty => List (lty, Type) -> lty -> Type
 MaybeLkp ts l = TypeOrUnit (isElem l (labelsOf ts))
@@ -189,11 +189,31 @@ infixr 7 .!.
                          (\isE => getType ts isE)
                          (\isE => lookupR l r isE)
 
+-- *** Update ***
+
+updateH : DecEq lty => (l : lty) -> 
+          (isE : Elem l (labelsOf ts)) -> 
+          getType ts isE -> LHList ts -> LHList ts
+updateH l {ts=(l,_)::ts} Here v ( _ :> fs) = (l .=. v) :> fs
+updateH l {ts=(_,_)::ts} (There th) v (f :> fs) = f :> updateH l th v fs
+
+updateR : DecEq lty => (l : lty) -> 
+          (isE : Elem l (labelsOf ts)) -> 
+          getType ts isE -> Record ts -> Record ts
+updateR l isE v (MkRecord isS fs) = MkRecord isS (updateH l isE v fs)
+
+MaybeUpd : DecEq lty => List (lty, Type) -> lty -> Type
+MaybeUpd ts l = TypeOrUnit (isElem l (labelsOf ts))
+                (\isE => getType ts isE -> Record ts)
+
+updR : DecEq lty => (l : lty) -> Record ts -> MaybeUpd ts l
+updR {ts} l r = 
+     mkTorU (isElem l (labelsOf ts))
+            (\isE => getType ts isE -> Record ts)
+            (\isE => \v => updateR l isE v r)
+
 
 -- *** Append ***
-
-
-
 
 appendR : DecEq lty => {ts, us : List (lty, Type)} -> 
           Record ts -> Record us ->

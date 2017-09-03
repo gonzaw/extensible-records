@@ -6,7 +6,7 @@ import Data.List
 -- All functions must be total
 %default total
 
--- Initial records
+-- *** Initial records ***
 r1 : Record [("surname", String), ("age", Int)]
 r1 = ("surname" .=. "Bond") .*.
      ("age" .=. 30) .*.
@@ -22,7 +22,7 @@ r3 = ("name" .=. "James") .*.
      ("code" .=. "007") .*.
      emptyRec
      
--- Lookup
+-- *** Lookup ***
 
 r1Surname : String
 r1Surname = r1 .!. "surname"
@@ -32,7 +32,14 @@ r1Age : Int
 r1Age = r1 .!. "age"
 -- 30
 
--- Append
+-- *** Append ***
+
 rAppend : Record [("surname", String), ("age", Int), ("name", String), ("code", String)]
 rAppend = r1 .++. r3
 -- { "surname" = "Bond", "age" = 30, "name" = "James", "code" = "007" }
+
+-- *** Update ***
+
+rUpdate : Record [("surname", String), ("age", Int)]
+rUpdate = updR "surname" r1 "Dean"
+-- { "surname" = "Dean", "age" = 30 }
