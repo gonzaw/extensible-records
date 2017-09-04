@@ -85,3 +85,18 @@ rLeftUnion2 = r2 .||. r4
 rLeftUnion3 : Record [("name", String), ("code", String), ("surname", String)]
 rLeftUnion3 = r4 .||. r2
 -- { "name" = "Ronald", "code" = "007", "surname" = "Bond" }
+
+
+-- *** Projection ***
+
+r5 : Record [("name", String), ("surname", String), ("age", Int), ("code", String), ("supervisor", String)]
+r5 = ("name" .=. "James") .*.
+     ("surname" .=. "Bond") .*.
+     ("age" .=. 30) .*.
+     ("code" .=. "007") .*.
+     ("supervisor" .=. "M") .*.
+     emptyRec
+     
+rProjectLeft : Record [("name", String), ("age", Int), ("supervisor", String)]
+rProjectLeft = ["name", "supervisor", "age"] .<. r5
+-- { "name" = "James", "age" = 30, "supervisor" = "M" }

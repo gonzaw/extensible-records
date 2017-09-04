@@ -19,14 +19,14 @@ symNot notEqual Refl = notEqual Refl
 consNotEqNil : {xs : List t} -> Not (x :: xs = [])
 consNotEqNil Refl impossible
 
-noEmptyElem : Not (Elem x [])
-noEmptyElem Here impossible
-
 
 -- *** Properties of Elem ***
 
-notElemInCons : Not (Elem x (y :: ys)) -> Not (Elem x ys)
-notElemInCons notElemCons elemTail = notElemCons $ There elemTail
+noEmptyElem : Not (Elem x [])
+noEmptyElem Here impossible
+
+noElemInCons : Not (Elem x (y :: ys)) -> Not (Elem x ys)
+noElemInCons notElemCons elemTail = notElemCons $ There elemTail
 
 ifNotElemThenNotEqual : Not (Elem x (y :: ys)) -> Not (x = y)
 ifNotElemThenNotEqual notElemCons equal = notElemCons $ rewrite equal in Here
@@ -58,12 +58,12 @@ ifAllNotInConsThenAllNotInRest : AllNotInList ls (x :: xs) -> AllNotInList ls xs
 ifAllNotInConsThenAllNotInRest  AllOverListNil = AllOverListNil
 ifAllNotInConsThenAllNotInRest {ls = l :: _} (AllOverListCons l nIsE notAllInList) = 
   let allNotInRest = ifAllNotInConsThenAllNotInRest notAllInList
-  in AllOverListCons l (notElemInCons nIsE) allNotInRest
+  in AllOverListCons l (noElemInCons nIsE) allNotInRest
 
 ifAllNotInListAndValueNotInFirstOneThenNotInCons : Not (Elem y xs) -> AllNotInList xs ys -> AllNotInList xs (y :: ys)  
 ifAllNotInListAndValueNotInFirstOneThenNotInCons nIsE AllOverListNil = AllOverListNil
 ifAllNotInListAndValueNotInFirstOneThenNotInCons nIsEY (AllOverListCons x nIsEX allNot) = 
-  let allNotInRest = ifAllNotInListAndValueNotInFirstOneThenNotInCons (notElemInCons nIsEY) allNot
+  let allNotInRest = ifAllNotInListAndValueNotInFirstOneThenNotInCons (noElemInCons nIsEY) allNot
       nEq = ifNotElemThenNotEqual nIsEY
       nIsEXCons = ifNotEqualNotElemThenNotInCons nIsEX (symNot nEq)
   in AllOverListCons x nIsEXCons allNotInRest
@@ -151,6 +151,24 @@ infixr 4 :||:
 (:||:) : DecEq lty => List (lty, Type) -> List (lty, Type) -> List (lty, Type)
 (:||:) ts us = ts ++ ((labelsOf ts) :///: us)
 
+infixr 4 :<:
+
+-- Returns left projection of a list
+(:<:) : DecEq lty => List lty -> List (lty, Type) -> List (lty, Type)
+(:<:) _ [] = []
+(:<:) ls ((l, ty) :: ts) with (isElem l ls)
+  (:<:) ls ((l, ty) :: ts) | Yes _ = (l, ty) :: (ls :<: ts)
+  (:<:) ls ((l, _) :: ts)  | No _  = ls :<: ts
+
+infixr 4 :>:
+
+-- Returns right projection of a lsit
+(:>:) : DecEq lty => List lty -> List (lty, Type) -> List (lty, Type)
+(:>:) _ [] = []
+(:>:) ls ((l, ty) :: ts) with (isElem l ls)
+  (:>:) ls ((l, _) :: ts)  | Yes _ = ls :<: ts
+  (:>:) ls ((l, ty) :: ts) | No _  = (l, ty) :: (ls :<: ts)
+
 
 -- *** Theorems on append ***
 
@@ -214,7 +232,7 @@ ifNotInNeitherThenNotInAppend : DecEq lty => {ts, us : List (lty, Type)} -> {l :
 ifNotInNeitherThenNotInAppend {ts=[]} (_, nIsE2) isEApp = nIsE2 isEApp
 ifNotInNeitherThenNotInAppend {ts=((_, _) :: _)} (nIsE1, _) Here = nIsE1 Here
 ifNotInNeitherThenNotInAppend {ts=((_, _) :: _)} (nIsE1, nIsE2) (There th) = 
-  let nIsEApp = ifNotInNeitherThenNotInAppend ((notElemInCons nIsE1), nIsE2)
+  let nIsEApp = ifNotInNeitherThenNotInAppend ((noElemInCons nIsE1), nIsE2)
   in nIsEApp th
 
 ifAppendIsSetThenEachIsSet : DecEq lty => {ts, us : List (lty, Type)} -> 
@@ -242,15 +260,15 @@ ifDeleteThenIsNotElem : DecEq lty => {ts : List (lty, Type)} -> (l : lty) -> {l'
                              Not (Elem l' (labelsOf ts)) -> Not (Elem l' (labelsOf (l ://: ts)))
 ifDeleteThenIsNotElem {ts=[]} l {l'} nIsE isEDel = absurd $ noEmptyElem isEDel
 ifDeleteThenIsNotElem {ts=(l'', ty)::ts} l {l'} nIsE isEDel with (decEq l l'')
-  ifDeleteThenIsNotElem {ts=(l, ty)::ts} l {l'} nIsE isEDel      | Yes Refl = (notElemInCons nIsE) isEDel
+  ifDeleteThenIsNotElem {ts=(l, ty)::ts} l {l'} nIsE isEDel      | Yes Refl = (noElemInCons nIsE) isEDel
   ifDeleteThenIsNotElem {ts=(l', ty)::ts} l {l'} nIsE Here       | No contra = nIsE Here
   ifDeleteThenIsNotElem {ts=(l'', ty)::ts} l {l'} nIsE (There th)| No _ = 
-                             ifDeleteThenIsNotElem l {l'} {ts} (notElemInCons nIsE) th
+                             ifDeleteThenIsNotElem l {l'} {ts} (noElemInCons nIsE) th
   
 ifDeleteThenIsSet : DecEq lty => {ts : List (lty, Type)} -> (l : lty) -> IsSet (labelsOf ts) -> IsSet (labelsOf (l ://: ts))
 ifDeleteThenIsSet {ts=[]} l isS = IsSetNil
 ifDeleteThenIsSet {ts=(l', ty)::ts} l (IsSetCons nIsE isS) with (decEq l l') 
-  ifDeleteThenIsSet {ts=(l, ty)::ts} l (IsSetCons nIsE isS) | Yes Refl = isS
+  ifDeleteThenIsSet {ts=(l, ty)::ts} l (IsSetCons nIsE isS)  | Yes Refl = isS
   ifDeleteThenIsSet {ts=(l', ty)::ts} l (IsSetCons nIsE isS) | No _  = 
     let nIsEDel = ifDeleteThenIsNotElem l {l'} nIsE
         isSDel = ifDeleteThenIsSet l isS
@@ -315,6 +333,30 @@ ifLeftUnionThenisSet {ts} {us} isS1 isS2 =
       delLabelsNotInList = ifDeleteLabelsThenNoneAreInList (labelsOf ts) us isS2
       isSApp = ifEachIsSetThenAppendIsSet {ts} {us=(labelsOf ts) :///: us} (isS1, isSDel) delLabelsNotInList
   in isSApp 
+  
+  
+-- *** Theorems on left projection ***
+
+ifProjectLeftThenIsNotElem : DecEq lty => {ts : List (lty, Type)} -> (ls : List lty) -> 
+                             Not (Elem l (labelsOf ts)) -> Not (Elem l (labelsOf (ls :<: ts)))
+ifProjectLeftThenIsNotElem {ts=[]} ls nIsE isEProj = noEmptyElem isEProj
+ifProjectLeftThenIsNotElem {ts=(l', _) :: ts} {l} ls nIsE isEProj with (isElem l' ls)
+  ifProjectLeftThenIsNotElem {ts=(l, _) :: ts} {l} _ nIsE Here         | Yes _ = nIsE Here
+  ifProjectLeftThenIsNotElem {ts=(l', _) :: ts} {l} ls nIsE (There th) | Yes _ = 
+    ifProjectLeftThenIsNotElem {ts} ls (noElemInCons nIsE) th
+  ifProjectLeftThenIsNotElem {ts=(l', _) :: ts} {l} ls nIsE isEProj    | No _  = 
+    ifProjectLeftThenIsNotElem {ts} ls (noElemInCons nIsE) isEProj
+    
+ifProjectLeftThenIsSet : DecEq lty => {ts : List (lty, Type)} -> (ls : List lty) -> 
+                         IsSet (labelsOf ts) -> IsSet (labelsOf (ls :<: ts))
+ifProjectLeftThenIsSet {ts=[]} _ _ = IsSetNil
+ifProjectLeftThenIsSet {ts=(l, _) :: ts} ls isS with (isElem l ls)
+  ifProjectLeftThenIsSet {ts=(l, _) :: ts} ls (IsSetCons nIsE isS) | Yes _ = 
+    let nIsEInProj = ifProjectLeftThenIsNotElem {ts} ls nIsE
+        isSProj = ifProjectLeftThenIsSet {ts} ls isS
+    in IsSetCons nIsEInProj isSProj
+  ifProjectLeftThenIsSet {ts=(l, _) :: ts} ls (IsSetCons _ isS)    | No _  = 
+                         ifProjectLeftThenIsSet ls isS
 
 
 -- *** Record ***
@@ -522,3 +564,38 @@ infixr 7 .||.
   let newFs = hLeftUnionH fs gs
       newIsS = ifLeftUnionThenisSet isS1 isS2
   in MkRecord newIsS newFs
+
+
+-- *** Left Projection ***
+
+projectLeftH : DecEq lty => {ts : List (lty, Type)} -> (ls : List lty) ->
+               LHList ts -> LHList (ls :<: ts)
+projectLeftH {ts=[]} _ HNil = HNil
+projectLeftH {ts=(l, _) :: _} ls fs with (isElem l ls)
+  projectLeftH {ts=(l, _) :: _} ls (f :> fs) | Yes _ = f :> projectLeftH ls fs
+  projectLeftH {ts=(l, _) :: _} ls (_ :> fs) | No _  = projectLeftH ls fs
+
+infixr 7 .<.
+
+(.<.) : DecEq lty => {ts : List (lty, Type)} -> (ls : List lty) ->
+        Record ts -> Record (ls :<: ts)
+(.<.) ls (MkRecord isS fs) =
+  let newFs = projectLeftH ls fs
+      newIsS = ifProjectLeftThenIsSet ls isS
+  in MkRecord newIsS newFs
+
+
+-- *** Right Projection ***
+
+{-projectRight : DecEq lty => {ts : List (lty, Type)} ->
+              (ls : List lty) -> IsSet ls -> 
+              Record ts -> Record (ls :>: ts)
+
+infixr 7 .>.
+
+(.>.) : DecEq lty => {ts : List (lty, Type)} -> 
+        (ls : List lty) -> Record ts -> 
+        MaybeP ls ts (Record (ls :>: ts))
+(.>.) ls r = mkTorUC (isSet ls)
+                     (\isS => projectRight ls isS r)
+-}
