@@ -1,4 +1,4 @@
-module Record
+module extensible_records
 
 import Data.List
 import list

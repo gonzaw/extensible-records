@@ -1,4 +1,4 @@
-module Record.Sample
+module sample
 
 import extensible_records
 import Data.List
@@ -22,7 +22,11 @@ r3 : Record [("name", String), ("code", String)]
 r3 = ("name" .=. "James") .*.
      ("code" .=. "007") .*.
      emptyRec
-          
+     
+-- *** Record Extension ***
+
+rExtended : Record [("name", String), ("surname", String), ("age", Int)]
+rExtended = ("name" .=. "James") .*. r1          
           
 -- *** Lookup ***
 
