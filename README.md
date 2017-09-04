@@ -75,7 +75,7 @@ You can find more examples and ways to use such operators in the `samples.idr` f
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
+We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/gonzaw/extensible-records/tags). 
 
 ## License
 
