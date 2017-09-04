@@ -166,8 +166,8 @@ infixr 4 :>:
 (:>:) : DecEq lty => List lty -> List (lty, Type) -> List (lty, Type)
 (:>:) _ [] = []
 (:>:) ls ((l, ty) :: ts) with (isElem l ls)
-  (:>:) ls ((l, _) :: ts)  | Yes _ = ls :<: ts
-  (:>:) ls ((l, ty) :: ts) | No _  = (l, ty) :: (ls :<: ts)
+  (:>:) ls ((l, _) :: ts)  | Yes _ = ls :>: ts
+  (:>:) ls ((l, ty) :: ts) | No _  = (l, ty) :: (ls :>: ts)
 
 
 -- *** Theorems on append ***
@@ -358,6 +358,30 @@ ifProjectLeftThenIsSet {ts=(l, _) :: ts} ls isS with (isElem l ls)
   ifProjectLeftThenIsSet {ts=(l, _) :: ts} ls (IsSetCons _ isS)    | No _  = 
                          ifProjectLeftThenIsSet ls isS
 
+
+-- *** Theorems on right projection ***
+
+ifProjectRightThenIsNotElem : DecEq lty => {ts : List (lty, Type)} -> (ls : List lty) -> 
+                             Not (Elem l (labelsOf ts)) -> Not (Elem l (labelsOf (ls :>: ts)))
+ifProjectRightThenIsNotElem {ts=[]} ls nIsE isEProj = noEmptyElem isEProj
+ifProjectRightThenIsNotElem {ts=(l', _) :: ts} {l} ls nIsE isEProj with (isElem l' ls)
+  ifProjectRightThenIsNotElem {ts=(l', _) :: ts} {l} ls nIsE isEProj    | Yes _  = 
+    ifProjectRightThenIsNotElem {ts} ls (noElemInCons nIsE) isEProj
+  ifProjectRightThenIsNotElem {ts=(l, _) :: ts} {l} _ nIsE Here         | No _ = nIsE Here
+  ifProjectRightThenIsNotElem {ts=(l', _) :: ts} {l} ls nIsE (There th) | No _ = 
+    ifProjectRightThenIsNotElem {ts} ls (noElemInCons nIsE) th
+  
+ifProjectRightThenIsSet : DecEq lty => {ts : List (lty, Type)} -> (ls : List lty) -> 
+                         IsSet (labelsOf ts) -> IsSet (labelsOf (ls :>: ts))
+ifProjectRightThenIsSet {ts=[]} _ _ = IsSetNil
+ifProjectRightThenIsSet {ts=(l, _) :: ts} ls isS with (isElem l ls)
+  ifProjectRightThenIsSet {ts=(l, _) :: ts} ls (IsSetCons _ isS)    | Yes _ = 
+                         ifProjectRightThenIsSet ls isS  
+  ifProjectRightThenIsSet {ts=(l, _) :: ts} ls (IsSetCons nIsE isS) | No _ = 
+    let nIsEInProj = ifProjectRightThenIsNotElem {ts} ls nIsE
+        isSProj = ifProjectRightThenIsSet {ts} ls isS
+    in IsSetCons nIsEInProj isSProj
+  
 
 -- *** Record ***
 
@@ -587,15 +611,18 @@ infixr 7 .<.
 
 -- *** Right Projection ***
 
-{-projectRight : DecEq lty => {ts : List (lty, Type)} ->
-              (ls : List lty) -> IsSet ls -> 
-              Record ts -> Record (ls :>: ts)
-
+projectRightH : DecEq lty => {ts : List (lty, Type)} -> (ls : List lty) ->
+               LHList ts -> LHList (ls :>: ts)
+projectRightH {ts=[]} _ HNil = HNil
+projectRightH {ts=(l, _) :: _} ls fs with (isElem l ls)
+  projectRightH {ts=(l, _) :: _} ls (_ :> fs) | Yes _  = projectRightH ls fs
+  projectRightH {ts=(l, _) :: _} ls (f :> fs) | No _ = f :> projectRightH ls fs
+  
 infixr 7 .>.
 
-(.>.) : DecEq lty => {ts : List (lty, Type)} -> 
-        (ls : List lty) -> Record ts -> 
-        MaybeP ls ts (Record (ls :>: ts))
-(.>.) ls r = mkTorUC (isSet ls)
-                     (\isS => projectRight ls isS r)
--}
+(.>.) : DecEq lty => {ts : List (lty, Type)} -> (ls : List lty) ->
+        Record ts -> Record (ls :>: ts)
+(.>.) ls (MkRecord isS fs) =
+  let newFs = projectRightH ls fs
+      newIsS = ifProjectRightThenIsSet ls isS
+  in MkRecord newIsS newFs

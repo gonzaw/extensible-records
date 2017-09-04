@@ -100,3 +100,7 @@ r5 = ("name" .=. "James") .*.
 rProjectLeft : Record [("name", String), ("age", Int), ("supervisor", String)]
 rProjectLeft = ["name", "supervisor", "age"] .<. r5
 -- { "name" = "James", "age" = 30, "supervisor" = "M" }
+
+rProjectRight : Record [("surname", String), ("code", String)]
+rProjectRight = ["name", "supervisor", "age"] .>. r5
+-- { "surname" = "Bond", "code" = "007" }
