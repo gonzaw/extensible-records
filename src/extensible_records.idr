@@ -21,7 +21,7 @@ infix 5 :>
   
 data LHList : List (lty, Type) -> Type where
   HNil : LHList []
-  (:>) : Field lty t -> LHList ts -> LHList ((lty, t) :: ts)
+  (:>) : Field l t -> LHList ts -> LHList ((l, t) :: ts)
 
 infixr 3 :++:
 
@@ -30,12 +30,26 @@ infixr 3 :++:
 (:++:) HNil ys      = ys
 (:++:) (x :> xs) ys = x :> (xs :++: ys)
 
+infixr 2 :#:
+
+-- Ordered insert of a labelled hlist
+(:#:) : Ord lty => {l : lty} -> Field l ty -> LHList ts -> LHList ((l, ty) :##: ts)
+(:#:) {ts=[]} f fs = f :> fs
+(:#:) {l=l1} {ty=ty1} {ts=(l2,ty2)::ts} f fs with (compare l1 l2)
+  (:#:) {l=l1} {ty=ty1} {ts=(l2,ty2)::ts} f fs | LT = f :> fs
+  (:#:) {l=l1} {ty=ty1} {ts=(l2,ty2)::ts} f fs | EQ = f :> fs
+  (:#:) {l=l1} {ty=ty1} {ts=(l2,ty2)::ts} f1 (f2 :> fs) | GT = f2 :> (f1 :#: fs)
+
 
 -- *** Record ***
 
 data Record : List (lty, Type) -> Type where
   MkRecord : IsSet (labelsOf ts) -> LHList ts ->
                                     Record ts
+ 
+-- Alias for record
+Rec : Ord lty => List (lty, Type) -> Type
+Rec ls = Record (insort ls)
  
 recToHList : Record ts -> LHList ts
 recToHList (MkRecord _ hs) = hs
@@ -93,21 +107,22 @@ mkUorTC {ty} d f = mkUorT d (\_ => ty)
 
 -- *** Extension of record ***
 
-consR : DecEq lty => {l : lty} ->
+consR : (Ord lty, DecEq lty) => {l : lty} ->
         Field l t -> Record ts ->
         Not (Elem l (labelsOf ts)) ->
-        Record ((l, t) :: ts)
+        Record ((l, t) :##: ts)
 consR {ts} f (MkRecord isS fs) notLInTs =
-  MkRecord (IsSetCons notLInTs isS) (f :> fs)
+  let isSetOrderCons = ifIsSetThenSoInOrderInsert $ IsSetCons notLInTs isS
+  in MkRecord isSetOrderCons (f :#: fs)
 
-MaybeE : DecEq lty => lty -> List (lty, Type) -> Type -> Type
+MaybeE : (Ord lty, DecEq lty) => lty -> List (lty, Type) -> Type -> Type
 MaybeE l ts r = UnitOrTypeC (isElem l (labelsOf ts)) r
 
 infixr 6 .*.
 
-(.*.) : DecEq lty => {l : lty} ->
+(.*.) : (Ord lty, DecEq lty) => {l : lty} ->
         Field l t -> Record ts ->
-        MaybeE l ts (Record ((l, t) :: ts))
+        MaybeE l ts (Record ((l, t) :##: ts))
 (.*.) {l} {ts} f r
    = mkUorTC (isElem l (labelsOf ts))
             (\notp => consR f r notp)

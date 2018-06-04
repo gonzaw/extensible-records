@@ -35,6 +35,9 @@ ifNotEqualNotElemThenNotInCons : Not (Elem x ys) -> Not (x = y) -> Not (Elem x (
 ifNotEqualNotElemThenNotInCons nIsE nEq Here = nEq Refl
 ifNotEqualNotElemThenNotInCons nIsE nEq (There th) = nIsE th
 
+ifNotElemThenNotInSwitch : Not (Elem x (y :: ys)) -> Not (Elem y ys) -> Not (Elem y (x :: ys))
+ifNotElemThenNotInSwitch notXInCons notYInYs Here = notXInCons Here
+ifNotElemThenNotInSwitch notXInCons notYInYs (There there) = notYInYs there
 
 -- *** Predicates over lists ***
 
@@ -106,6 +109,20 @@ isSet (x :: xs) with (isSet xs)
     
 -- *** Functions on List (lty, Type) ***
 
+infixr 2 :##:
+
+-- Ordered insert
+(:##:) : Ord lty => (lty, Type) -> List (lty, Type) -> List (lty, Type)
+(:##:) x [] = [x]
+(:##:) x1@(l1, _) (x2@(l2, _)::xs) = case (compare l1 l2) of
+  GT => x2 :: (x1 :##: xs)
+  _  => x1 :: x2 :: xs
+
+-- Insert Sort
+insort : Ord lty => List (lty, Type) -> List (lty, Type)
+insort [] = []
+insort (x::xs) = x :##: (insort xs)    
+        
 labelsOf: List (lty, Type) -> List lty
 labelsOf = map fst
 
@@ -149,6 +166,37 @@ infixr 4 :>:
   (:>:) ls ((l, _) :: ts)  | Yes _ = ls :>: ts
   (:>:) ls ((l, ty) :: ts) | No _  = (l, ty) :: (ls :>: ts)
 
+-- *** Theorems on ordered insert ***
+
+ifNotElemThenSoInOrderInsert_Lemma : Not (Elem l1 (l2 :: l3 :: ls)) -> Not (Elem l1 (l3 :: l2 :: ls))
+ifNotElemThenSoInOrderInsert_Lemma notElem Here = noElemInCons notElem $ Here
+ifNotElemThenSoInOrderInsert_Lemma notElem (There Here) = notElem Here
+ifNotElemThenSoInOrderInsert_Lemma notElem (There (There there)) = noElemInCons (noElemInCons notElem) $ there
+
+ifNotElemThenSoInOrderInsert : Ord lty => {l1, l2 : lty} -> Not (Elem l1 (labelsOf ((l2, ty2) :: ls))) ->
+  Not (Elem l1 (labelsOf ((l2, ty2) :##: ls)))
+ifNotElemThenSoInOrderInsert {ls=[]} notElem elem = notElem elem
+ifNotElemThenSoInOrderInsert {l1} {l2} {ty2} {ls=(l3,ty3)::ls} notElem elem with (compare l2 l3)
+  ifNotElemThenSoInOrderInsert {l1} {l2} {ty2} {ls=(l3,ty3)::ls} notElem elem | LT = notElem elem
+  ifNotElemThenSoInOrderInsert {l1} {l2} {ty2} {ls=(l3,ty3)::ls} notElem elem | EQ = notElem elem
+  ifNotElemThenSoInOrderInsert {l1 = l1} {l2 = l2} {ty2 = ty2} {ls=(l1,ty3)::ls} notElem Here | GT = noElemInCons notElem $ Here
+  ifNotElemThenSoInOrderInsert {l1 = l1} {l2 = l2} {ty2 = ty2} {ls=(l3,ty3)::ls} notElem (There later) | GT = 
+    let notElemL1InSwitch = ifNotElemThenSoInOrderInsert_Lemma notElem
+        subPrf = ifNotElemThenSoInOrderInsert {ty2} {ls} $ noElemInCons notElemL1InSwitch
+    in subPrf later
+
+ifIsSetThenSoInOrderInsert : Ord lty => {l : lty} -> IsSet (labelsOf ((l, ty) :: ls)) -> IsSet (labelsOf ((l, ty) :##: ls))
+ifIsSetThenSoInOrderInsert {ls=[]} isS = isS
+ifIsSetThenSoInOrderInsert {l=l1} {ty=ty1} {ls=(l2,ty2)::ls} isS with (compare l1 l2)
+  ifIsSetThenSoInOrderInsert {l=l1} {ty=ty1} {ls=(l2,ty2)::ls} isS | LT = isS
+  ifIsSetThenSoInOrderInsert {l=l1} {ty=ty1} {ls=(l2,ty2)::ls} isS | EQ = isS
+  ifIsSetThenSoInOrderInsert {l=l1} {ty=ty1} {ls=(l2,ty2)::ls} (IsSetCons notL1InL2AndLs (IsSetCons notL2InLs isSLs)) | GT = 
+    let notL1InLs = noElemInCons notL1InL2AndLs
+        isSL1InLs = IsSetCons notL1InLs isSLs
+        isSConsL1ConsLs = ifIsSetThenSoInOrderInsert isSL1InLs
+        notL2InL1AndLs = ifNotElemThenNotInSwitch notL1InL2AndLs notL2InLs
+        notL2InL1ConsLs = ifNotElemThenSoInOrderInsert notL2InL1AndLs
+    in IsSetCons notL2InL1ConsLs isSConsL1ConsLs
 
 -- *** Theorems on append ***
 
