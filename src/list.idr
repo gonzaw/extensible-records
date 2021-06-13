@@ -196,11 +196,17 @@ ifNotInAppendThenNotInNeither {ts=[]} {us} {l} notInAppend = (nIsE1, nIsE2)
 ifNotInAppendThenNotInNeither {ts=((lt, tyt) :: ts)} {us} {l} nIsEApp = (nIsE1, nIsE2)  
   where    
     nIsE1 : Not (Elem l (labelsOf ((lt, tyt) :: ts)))
-    nIsE1 Here impossible
-    nIsE1 (There th) = 
-      let isEApp = ifIsInOneThenIsInAppend (Left th)
-      in nIsEApp (There isEApp)
-    
+    nIsE1 a with (decEq l lt)
+      nIsE1 a | Yes ok    
+        = case a of 
+            Here     => nIsEApp Here
+            There th => nIsEApp (rewrite ok in Here)
+      nIsE1 a | No contra
+        = case a of 
+            Here     => contra Refl
+            There th => let isEApp = ifIsInOneThenIsInAppend (Left th)
+                        in  nIsEApp (There isEApp)         
+
     nIsE2 : Not (Elem l (labelsOf us))
     nIsE2 isE =
       let isEApp = ifIsInOneThenIsInAppend (Right isE)
